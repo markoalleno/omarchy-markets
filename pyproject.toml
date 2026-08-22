@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omarchy-markets"
-version = "0.1.0"
+version = "0.1.1"
 description = "Omarchy tray for Coinbase prices, stocks, and portfolio alerts"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -32,9 +32,10 @@ def cmd_status(_args: argparse.Namespace) -> None:
         rows.append(quotes.quote(symbol))
     if portfolio.available():
         rows.append(portfolio.portfolio_quote())
-    for row in rows:
+    for row, line in zip(rows, quotes.aligned_rows(rows)):
         flag = "!" if alerts.is_massive(row, cfg) else " "
-        print(f"{flag} {row.tray_text}" + (f"  ({row.error})" if row.error else ""))
+        extra = f"  ({row.error})" if row.error else ""
+        print(f"{flag} {line}{extra}")
 
 
 def cmd_tray(_args: argparse.Namespace) -> None:

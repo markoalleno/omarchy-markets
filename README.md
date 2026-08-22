@@ -1,6 +1,6 @@
 # Omarchy Markets
 
-System tray for **BTC**, **stocks**, and **Coinbase portfolio** balance. Hover or open the menu to switch what you are watching. Settings control which symbols you track and how large a one-day move has to be before you get a desktop notification.
+System tray for **BTC**, **stocks**, and **Coinbase portfolio** balance. Left-click the icon to see aligned prices and pick what the tray shows. Right-click for settings or quit. Settings control which symbols you track and how large a one-day move has to be before you get a desktop notification.
 
 Prices come from Coinbase's public market API (crypto) and Yahoo Finance (stocks). Portfolio totals use your local [coinbase-portfolio-mcp](https://github.com/markoalleno/coinbase-portfolio-mcp) credentials.
 
@@ -24,8 +24,8 @@ Crypto and stock quotes work without those files. Portfolio does not.
 
 | | |
 |---|---|
-| **Tray** | Label shows the selected quote. Click the menu to pick BTC, a stock, or portfolio. |
-| **Settings** | Tray → Settings, or `omarchy-markets settings` |
+| **Tray** | Label shows the selected quote. Left-click lists aligned prices (pick one to pin). Right-click → Settings or Quit. |
+| **Settings** | Tray right-click → Settings, or `omarchy-markets settings` |
 | **Alerts** | Notify when a watched symbol's 24h move (or portfolio's day change) exceeds the threshold |
 
 ```bash

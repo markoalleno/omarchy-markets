@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
-UA = "omarchy-markets/0.1"
+UA = "omarchy-markets/0.1.1"
 
 
 @dataclass
@@ -24,19 +24,45 @@ class Quote:
         return f"{sign}{self.change_pct:.2f}%"
 
     @property
+    def display_name(self) -> str:
+        if self.kind == "portfolio":
+            return "PF"
+        return self.label or self.symbol.split("-")[0]
+
+    @property
+    def price_text(self) -> str:
+        if self.error:
+            return "—"
+        if self.kind == "portfolio" or self.price >= 1000:
+            return f"${self.price:,.0f}"
+        if self.price >= 1:
+            return f"${self.price:,.2f}"
+        return f"${self.price:.4f}"
+
+    @property
+    def change_text(self) -> str:
+        return "—" if self.error else self.signed_change
+
+    @property
     def tray_text(self) -> str:
         if self.error:
-            return f"{self.symbol} —"
-        name = self.label or self.symbol.split("-")[0]
-        if self.kind == "portfolio":
-            return f"PF ${self.price:,.0f} {self.signed_change}"
-        if self.price >= 1000:
-            price = f"${self.price:,.0f}"
-        elif self.price >= 1:
-            price = f"${self.price:,.2f}"
-        else:
-            price = f"${self.price:.4f}"
-        return f"{name} {price} {self.signed_change}"
+            return f"{self.display_name} —"
+        return f"{self.display_name} {self.price_text} {self.signed_change}"
+
+
+def aligned_rows(items: list[Quote]) -> list[str]:
+    if not items:
+        return []
+    names = [item.display_name for item in items]
+    amounts = ["—" if item.error else item.price_text.removeprefix("$") for item in items]
+    changes = [item.change_text for item in items]
+    name_width = max(len(name) for name in names)
+    amount_width = max(len(amount) for amount in amounts)
+    change_width = max(len(change) for change in changes)
+    return [
+        f"{name:<{name_width}}  ${amount:>{amount_width}}  {change:>{change_width}}"
+        for name, amount, change in zip(names, amounts, changes)
+    ]
 
 
 def classify(symbol: str) -> str:

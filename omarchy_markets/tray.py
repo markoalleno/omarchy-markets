@@ -1,10 +1,64 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import threading
 from pathlib import Path
 
 from . import alerts, config, portfolio, quotes
+
+
+def watched_symbols(cfg: dict, quotes_by_symbol: dict | None = None) -> list[str]:
+    symbols = [str(item).upper() for item in cfg.get("crypto") or []]
+    symbols += [str(item).upper() for item in cfg.get("stocks") or []]
+    if quotes_by_symbol is not None and "PORTFOLIO" in quotes_by_symbol and "PORTFOLIO" not in symbols:
+        symbols.append("PORTFOLIO")
+    return symbols
+
+
+def ordered_quotes(quotes_by_symbol: dict[str, quotes.Quote], symbols: list[str]) -> list[quotes.Quote]:
+    rows = []
+    for symbol in symbols:
+        quote = quotes_by_symbol.get(symbol)
+        if quote is None:
+            quote = quotes.Quote(symbol=symbol, kind=quotes.classify(symbol), price=0, change_pct=0, error="no quote")
+        rows.append(quote)
+    return rows
+
+
+def price_menu_options(items: list[quotes.Quote], selected: str = "") -> list[str]:
+    selected = selected.upper()
+    options = []
+    for quote, line in zip(items, quotes.aligned_rows(items)):
+        glyph = "●" if quote.symbol.upper() == selected else "○"
+        options.append(f"{glyph}\t{line}\t{quote.symbol}")
+    return options
+
+
+def pick_symbol(options: list[str]) -> str | None:
+    if not options:
+        return None
+    binary = shutil.which("omarchy-menu-select")
+    if not binary:
+        return None
+    result = subprocess.run(
+        [binary, "Markets", *options, "--", "--width", "520"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    choice = result.stdout.strip()
+    if "\t" in choice:
+        return choice.split("\t")[-1]
+    return choice or None
+
+
+def notify_prices(lines: list[str]) -> None:
+    body = "\n".join(lines) if lines else "No quotes yet."
+    if shutil.which("omarchy-notification-send"):
+        subprocess.Popen(["omarchy-notification-send", "Markets", body], start_new_session=True)
 
 
 def _icon() -> str:
@@ -51,6 +105,9 @@ class MarketsTray:
         self.indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
         self.indicator.set_title("Markets")
         self.indicator.set_menu(Gtk.Menu())
+        # Omarchy left-clicks call SNI Activate. Ayatana only handles that if a
+        # handler is connected; otherwise the click is a no-op.
+        self.indicator.connect("activate", lambda *_args: self._show_prices())
         self.refresh()
         GLib.timeout_add_seconds(1, self._tick)
 
@@ -107,32 +164,32 @@ class MarketsTray:
         self._update_label()
         self._rebuild_menu()
 
+    def _quote_rows(self) -> list[quotes.Quote]:
+        cfg = config.load()
+        return ordered_quotes(self.quotes, watched_symbols(cfg, self.quotes))
+
+    def _show_prices(self) -> None:
+        self.GLib.idle_add(self._pick_from_prices)
+
+    def _pick_from_prices(self) -> bool:
+        rows = self._quote_rows()
+        if not rows or all(item.error for item in rows):
+            self.refresh()
+            notify_prices(["Fetching quotes…"])
+            return False
+        selected = str(config.load().get("tray_symbol") or "").upper()
+        picked = pick_symbol(price_menu_options(rows, selected))
+        if picked:
+            self._set_tray(picked)
+        elif shutil.which("omarchy-menu-select") is None:
+            notify_prices(quotes.aligned_rows(rows))
+        return False
+
     def _rebuild_menu(self) -> None:
         Gtk = self.Gtk
         menu = Gtk.Menu()
-        cfg = config.load()
-        selected = str(cfg.get("tray_symbol") or "").upper()
-        groups = (
-            ("Crypto", cfg["crypto"]),
-            ("Stocks", cfg["stocks"]),
-            ("Portfolio", ["PORTFOLIO"] if "PORTFOLIO" in self.quotes else []),
-        )
-        for title, symbols in groups:
-            if not symbols:
-                continue
-            header = Gtk.MenuItem(label=title)
-            header.set_sensitive(False)
-            menu.append(header)
-            for symbol in symbols:
-                quote = self.quotes.get(symbol)
-                mark = "● " if symbol == selected else "    "
-                label = quote.tray_text if quote else symbol
-                if quote and alerts.is_massive(quote, cfg):
-                    label = f"! {label}"
-                _item(menu, mark + label, lambda s=symbol: self._set_tray(s))
-            menu.append(Gtk.SeparatorMenuItem())
-        _item(menu, "Refresh now", self.refresh)
         _item(menu, "Settings…", self._settings)
+        _item(menu, "Quit", self._quit)
         menu.show_all()
         self.indicator.set_menu(menu)
 
@@ -140,6 +197,9 @@ class MarketsTray:
         from . import settings
 
         settings.show()
+
+    def _quit(self) -> None:
+        self.Gtk.main_quit()
 
 
 def run() -> None:

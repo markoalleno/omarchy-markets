@@ -22,6 +22,18 @@ class QuoteTests(unittest.TestCase):
         self.assertEqual(quote.price, 110)
         self.assertAlmostEqual(quote.change_pct, 10)
 
+    def test_aligned_rows_share_price_column(self):
+        rows = quotes.aligned_rows([
+            quotes.Quote("BTC-USD", "crypto", 77340, 2.8, label="BTC"),
+            quotes.Quote("ETH-USD", "crypto", 2941.12, -1.12, label="ETH"),
+            quotes.Quote("AAPL", "stock", 201.5, 0.4, label="AAPL"),
+        ])
+        self.assertEqual(len(set(len(row) for row in rows)), 1)
+        self.assertEqual(len(set(row.index("$") for row in rows)), 1)
+        self.assertTrue(rows[0].startswith("BTC"))
+        self.assertIn("77,340", rows[0])
+        self.assertIn("2,941", rows[1])
+
     def test_massive_move_uses_kind_threshold(self):
         cfg = {**config.DEFAULTS, "crypto_move_percent": 8, "stock_move_percent": 5}
         crypto = quotes.Quote("BTC-USD", "crypto", 1, 8.1)
