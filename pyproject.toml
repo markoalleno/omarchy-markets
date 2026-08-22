@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omarchy-markets"
+version = "0.1.0"
+description = "Omarchy tray for Coinbase prices, stocks, and portfolio alerts"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Mark Allen" }]
+
+[project.scripts]
+omarchy-markets = "omarchy_markets.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["omarchy_markets*"]
+
+[tool.setuptools.package-data]
+omarchy_markets = ["icons/*"]
