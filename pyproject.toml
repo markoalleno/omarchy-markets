@@ -10,6 +10,9 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Mark Allen" }]
+dependencies = [
+    "tomli>=2.0.0; python_version<'3.11'",
+]
 
 [project.scripts]
 omarchy-markets = "omarchy_markets.cli:main"

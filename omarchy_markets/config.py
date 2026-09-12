@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-import ast
 import os
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
 
 DEFAULTS = {
     "crypto": ["BTC-USD", "ETH-USD"],
@@ -29,17 +37,14 @@ def load() -> dict:
     file = paths()["config"] / "config.toml"
     if not file.exists():
         return cfg
-    for raw in file.read_text().splitlines():
-        row = raw.split("#", 1)[0].strip()
-        if not row or "=" not in row:
-            continue
-        key, raw_value = (part.strip() for part in row.split("=", 1))
+    
+    if tomllib is None:
+        raise ImportError("tomli package required for Python <3.11. Install with: pip install tomli")
+    
+    parsed = tomllib.loads(file.read_text())
+    for key, value in parsed.items():
         if key not in DEFAULTS:
             continue
-        if raw_value.lower() in ("true", "false"):
-            value = raw_value.lower() == "true"
-        else:
-            value = ast.literal_eval(raw_value)
         if key in ("crypto", "stocks"):
             if isinstance(value, str):
                 value = [value] if value else []
@@ -49,9 +54,19 @@ def load() -> dict:
 
 
 def dump(cfg: dict) -> str:
+    def _format_value(value):
+        if isinstance(value, bool):
+            return str(value).lower()
+        elif isinstance(value, str):
+            return repr(value)
+        elif isinstance(value, list):
+            return "[" + ", ".join(repr(item) for item in value) + "]"
+        else:
+            return repr(value)
+    
     rows = [
         "# Omarchy Markets — thresholds are absolute 24h percent moves.",
-        *[f"{key} = {str(value).lower() if isinstance(value, bool) else repr(value)}" for key, value in cfg.items()],
+        *[f"{key} = {_format_value(value)}" for key, value in cfg.items()],
         "",
     ]
     return "\n".join(rows)
