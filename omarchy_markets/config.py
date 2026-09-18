@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 from pathlib import Path
 
@@ -78,3 +79,17 @@ def save(updates: dict) -> Path:
 def threshold_for(kind: str, cfg: dict | None = None) -> float:
     cfg = cfg or load()
     return float(cfg.get(f"{kind}_move_percent") or cfg["crypto_move_percent"])
+
+
+def load_state_json(path: Path, default: dict) -> dict:
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text())
+    except ValueError:
+        return default
+
+
+def save_state_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload))
