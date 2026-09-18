@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -15,18 +14,11 @@ def _file() -> Path:
 
 
 def _load() -> dict:
-    file = _file()
-    if not file.exists():
-        return {"day": "", "sent": {}}
-    try:
-        return json.loads(file.read_text())
-    except ValueError:
-        return {"day": "", "sent": {}}
+    return config.load_state_json(_file(), {"day": "", "sent": {}})
 
 
 def _save(payload: dict) -> None:
-    config.paths()["state"].mkdir(parents=True, exist_ok=True)
-    _file().write_text(json.dumps(payload))
+    config.save_state_json(_file(), payload)
 
 
 def threshold(quote: Quote, cfg: dict | None = None) -> float:

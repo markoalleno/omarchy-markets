@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,17 +17,9 @@ def available() -> bool:
     return key.is_file() and secret.is_file() and key.stat().st_size > 0 and secret.stat().st_size > 0
 
 
-def _prepare_env() -> None:
-    key, secret = secret_files()
-    os.environ.setdefault("COINBASE_API_KEY_FILE", str(key))
-    os.environ.setdefault("COINBASE_API_SECRET_FILE", str(secret))
-    os.environ.setdefault("COINBASE_TICKER_CACHE", str(config.paths()["cache"] / "equity_tickers.json"))
-
-
 def snapshot() -> dict:
     if not available():
         raise RuntimeError("Add a view-only Coinbase CDP key to ~/.config/coinbase-mcp/")
-    _prepare_env()
     from coinbase_mcp.api import CoinbaseAPI
     from coinbase_mcp.config import Settings
     from coinbase_mcp.portfolio import PortfolioService
@@ -50,16 +41,10 @@ def portfolio_quote() -> quotes.Quote:
     total = float(str(totals.get("total_balance") or "0"))
     today = datetime.now(UTC).date().isoformat()
     state_path = _day_file()
-    state = {}
-    if state_path.exists():
-        try:
-            state = json.loads(state_path.read_text())
-        except ValueError:
-            state = {}
+    state = config.load_state_json(state_path, {})
     if state.get("day") != today:
         state = {"day": today, "open_total": total}
-        config.paths()["state"].mkdir(parents=True, exist_ok=True)
-        state_path.write_text(json.dumps(state))
+        config.save_state_json(state_path, state)
     open_total = float(state.get("open_total") or total)
     change = ((total / open_total) - 1) * 100 if open_total else 0.0
     positions = payload.get("positions") or []
