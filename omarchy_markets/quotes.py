@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 UA = "omarchy-markets/0.1.1"
 
@@ -16,7 +16,6 @@ class Quote:
     change_pct: float
     label: str = ""
     error: str = ""
-    extra: dict = field(default_factory=dict)
 
     @property
     def signed_change(self) -> str:
@@ -93,7 +92,6 @@ def crypto_quote(product_id: str) -> Quote:
             price=price,
             change_pct=change,
             label=(product.get("base_display_symbol") or product_id.split("-")[0]),
-            extra={"volume_24h": product.get("volume_24h")},
         )
     except (urllib.error.URLError, TimeoutError, ValueError, KeyError, json.JSONDecodeError) as error:
         return Quote(symbol=product_id, kind="crypto", price=0, change_pct=0, error=str(error) or "quote failed")
