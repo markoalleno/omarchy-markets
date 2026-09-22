@@ -69,10 +69,4 @@ def portfolio_quote() -> quotes.Quote:
         price=total,
         change_pct=change,
         label="Portfolio",
-        extra={
-            "crypto": totals.get("total_crypto_balance"),
-            "stocks": totals.get("total_equities_balance"),
-            "cash": totals.get("total_cash_equivalent_balance"),
-            "positions": positions[:12],
-        },
     )
